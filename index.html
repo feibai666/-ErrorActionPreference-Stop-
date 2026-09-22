@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>科研领料挑选系统</title>
+<script src="xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f5f7fa; color: #333; font-size: 14px; }
+  header { background: linear-gradient(135deg, #1e3a5f, #2c5282); color: #fff; padding: 12px 24px; box-shadow: 0 2px 8px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 100; }
+  header h1 { font-size: 19px; font-weight: 600; }
+  header .sub { font-size: 12px; opacity: .8; margin-top: 2px; }
+  .container { max-width: 1650px; margin: 14px auto; padding: 0 16px; }
+  .toolbar { background: #fff; border-radius: 8px; padding: 10px 16px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { cursor: pointer; border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; transition: all .15s; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-primary { background: #3182ce; color: #fff; }
+  .btn-primary:hover { background: #2c5282; }
+  .btn-success { background: #38a169; color: #fff; }
+  .btn-success:hover { background: #2f855a; }
+  .btn-danger { background: #e53e3e; color: #fff; }
+  .btn-danger:hover { background: #c53030; }
+  .btn-secondary { background: #edf2f7; color: #4a5568; border: 1px solid #e2e8f0; }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .btn-ghost { background: #fff; color: #3182ce; border: 1px solid #90cdf4; }
+  .btn-ghost:hover { background: #ebf8ff; }
+  .btn-sm { padding: 3px 9px; font-size: 12px; }
+  .stats { display: flex; gap: 14px; margin-left: auto; }
+  .stat-card { background: #f7fafc; padding: 6px 14px; border-radius: 6px; border-left: 3px solid #3182ce; }
+  .stat-card .label { font-size: 11px; color: #718096; }
+  .stat-card .value { font-size: 16px; font-weight: 600; color: #2d3748; }
+  .tabs { display: flex; gap: 6px; }
+  .tab { padding: 9px 18px; background: #edf2f7; border-radius: 6px; cursor: pointer; font-weight: 500; color: #4a5568; border: 1px solid transparent; }
+  .tab.active { background: #3182ce; color: #fff; }
+  .table-wrap { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); overflow: auto; max-height: calc(100vh - 300px); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { background: #edf2f7; color: #2d3748; font-weight: 600; padding: 8px 10px; text-align: left; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #cbd5e0; white-space: nowrap; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+  tr:hover td { background: #f7fafc; }
+  .col-num { text-align: right; white-space: nowrap; }
+  .col-center { text-align: center; }
+  .empty { text-align: center; padding: 50px 20px; color: #a0aec0; line-height: 1.9; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; display: none; }
+  .modal-bg.show { display: flex; align-items: center; justify-content: center; }
+  .modal { background: #fff; border-radius: 10px; padding: 20px 24px; min-width: 400px; max-width: 92vw; max-height: 88vh; overflow: auto; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+  .modal h3 { margin-bottom: 14px; color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; font-size: 16px; }
+  .modal label { display: block; margin: 10px 0 4px; font-size: 13px; color: #4a5568; font-weight: 500; }
+  .modal input, .modal select { width: 100%; padding: 7px 9px; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 13px; }
+  .modal input:focus, .modal select:focus { outline: none; border-color: #3182ce; }
+  .modal .actions { margin-top: 18px; display: flex; gap: 8px; justify-content: flex-end; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-ok { background: #c6f6d5; color: #22543d; }
+  .badge-low { background: #fefcbf; color: #744210; }
+  .badge-done { background: #fed7d7; color: #742a2a; }
+  .qty-input { width: 88px; padding: 3px 6px; border: 1px solid #cbd5e0; border-radius: 4px; text-align: right; font-size: 13px; }
+  .qty-input:focus { outline: none; border-color: #3182ce; }
+  .mini-input { width: 92px; padding: 3px 6px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 12px; }
+  .mini-input:focus { outline: none; border-color: #3182ce; background: #fff; }
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; background: #fff; padding: 10px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .filter-bar input[type=text], .filter-bar select { padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 13px; }
+  .filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: #3182ce; }
+  .toast { position: fixed; top: 76px; right: 20px; z-index: 300; background: #38a169; color: #fff; padding: 10px 18px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.2); opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.err { background: #e53e3e; }
+  .proj-banner { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 6px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 8px; }
+  .proj-banner select { min-width: 240px; }
+  .group-header td { background: #2c5282 !important; color: #fff !important; font-weight: 700 !important; font-size: 13.5px !important; padding: 9px 12px !important; }
+  .group-header .cnt { font-weight: 400; opacity: .85; font-size: 12px; }
+  .sub-total td { background: #edf2f7 !important; font-weight: 700 !important; color: #2d3748; }
+  .no-data { color: #cbd5e0; }
+  .hint { font-size: 12px; color: #718096; }
+  .cell-btns { white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div>
+      <h1>科研领料挑选系统</h1>
+      <div class="sub">导入月度库存表 · 挑选物料 · 按课题汇总</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📁 导入月度表</button>
+      <button class="btn btn-ghost" onclick="openProjectModal()">📁 课题管理</button>
+      <button class="btn btn-ghost" onclick="openColumnModal()">⚙ 自定义列</button>
+      <button class="btn btn-secondary" onclick="exportSelected()">⬇ 导出已挑选</button>
+      <span id="onlineBadge" style="font-size:12px;padding:4px 10px;border-radius:12px;background:#fed7d7;color:#742a2a;">● 离线</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="toolbar">
+    <div class="tabs">
+      <div class="tab active" id="tabPick" onclick="switchTab('pick')">① 挑选物料</div>
+      <div class="tab" id="tabSelected" onclick="switchTab('selected')">② 已挑选物料（<span id="selCount">0</span>）</div>
+    </div>
+    <div class="stats">
+      <div class="stat-card"><div class="label">物料条目</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat-card"><div class="label">已挑选条目</div><div class="value" id="statPicked">0</div></div>
+      <div class="stat-card"><div class="label">已挑选金额</div><div class="value" id="statAmount">¥0</div></div>
+    </div>
+  </div>
+
+  <!-- 挑选面板 -->
+  <div id="pickPanel">
+    <div class="filter-bar">
+      <div class="proj-banner">
+        <span style="font-size:12px;color:#2c5282;font-weight:600;">本次领料课题</span>
+        <select id="curProject" onchange="saveAll()"></select>
+        <button class="btn btn-ghost btn-sm" onclick="openProjectModal()">管理</button>
+      </div>
+      <input type="text" id="searchBox" placeholder="🔍 搜索物料描述 / 编码 / 批次 / 供应商" style="flex:1;min-width:220px;" oninput="renderPick()">
+      <select id="filterLocation" onchange="renderPick()" style="min-width:150px;"><option value="">全部存储地点</option></select>
+      <label class="hint" style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="onlyAvail" onchange="renderPick()"> 仅看有剩余</label>
+    </div>
+    <div class="hint" style="margin:0 4px 8px;">提示：挑选数量默认为全部剩余量，领一部分时请先修改数量再点「挑选」；挑选金额按数量比例自动折算。</div>
+    <div class="table-wrap" id="pickTableWrap"></div>
+  </div>
+
+  <!-- 已挑选面板 -->
+  <div id="selectedPanel" style="display:none;">
+    <div class="filter-bar">
+      <label class="hint" style="display:flex;align-items:center;gap:4px;font-weight:600;color:#2c5282;"><input type="checkbox" id="groupByProj" checked onchange="renderSelected()"> 按课题合并展示</label>
+      <select id="selProject" onchange="renderSelected()" style="min-width:220px;"></select>
+      <input type="text" id="selSearch" placeholder="🔍 搜索已挑选物料" style="flex:1;min-width:180px;" oninput="renderSelected()">
+      <button class="btn btn-danger btn-sm" onclick="clearAllSelected()">清空全部</button>
+    </div>
+    <div class="table-wrap" id="selectedTableWrap"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ============= 全局状态 =============
+let ALL_DATA = [];    // 库存 [{idx, code, name, qty, amount, unit, locCode, locName, batch, supplier, remain, c_xxx...}]
+let PICKED = [];      // 已挑选 [{pickId, idx, code, name, qty, amount, takeQty, takeAmount, unit, locCode, locName, batch, supplier, projectId, project, leader, c_xxx...}]
+let PROJECTS = [];    // 课题 [{id, name, leader}]
+let CUSTOM_COLS = []; // 自定义列 [{key, label, scope: pick|selected|both}]
+let COUNTER = 1;
+const STORAGE_KEY = 'kyll_state_v1';
+
+const COLS = [
+  {key:'code',    label:'物料编码'},
+  {key:'name',    label:'物料描述'},
+  {key:'qty',     label:'库存数量', num:true},
+  {key:'amount',  label:'金额（元）', num:true},
+  {key:'unit',    label:'单位'},
+  {key:'locName', label:'存储地点'},
+  {key:'batch',   label:'批次编号'},
+  {key:'supplier',label:'供应商'},
+];
+
+// ============= 工具 =============
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtNum(n){ return (Math.round((+n||0)*100)/100).toLocaleString('zh-CN',{maximumFractionDigits:2}); }
+function fmtMoney(n){ return '¥'+fmtNum(n); }
+function parseNum(v){ if(typeof v==='number') return v; return parseFloat(String(v||'').replace(/[,，\s¥￥]/g,''))||0; }
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show'+(isErr?' err':'');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+// ============= 初始化 =============
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadAll(true);
+  renderAll();
+});
+
+// ============= Excel 导入 =============
+async function importFromBuffer(buf){
+  const wb = XLSX.read(buf, {type:'array'});
+  const sheetName = wb.SheetNames.find(n => /可挑选/.test(n))
+    || wb.SheetNames.find(n => /挑选|物料/.test(n))
+    || wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:''});
+  if (!rows.length) { showToast('所选工作表无数据', true); return 0; }
+
+  const keys = Object.keys(rows[0]);
+  const findKey = (pats, excl) => keys.find(k => pats.some(p=>k.includes(p)) && !(excl||[]).some(x=>k.includes(x)));
+  const kCode    = findKey(['物料编码']);
+  const kName    = findKey(['物料长文本','物料描述','物料名称']);
+  const kQty     = findKey(['数量']);
+  const kAmount  = findKey(['金额']);
+  const kUnit    = findKey(['计量单位']);
+  const kLocName = findKey(['库存位置名称','存储地点','存放地点']);
+  const kLocCode = findKey(['库存位置'],['名称']);
+  const kBatch   = findKey(['批次编号','批次']);
+  const kSupplier= findKey(['供应商名称','供应商']);
+
+  if (!kName) { showToast('未找到「物料描述 / 物料长文本」列，请检查表格格式', true); return 0; }
+
+  PICKED = [];  // 新月份清空挑选记录
+  ALL_DATA = rows
+    .map((r,i) => ({
+      idx: i,
+      code: String(r[kCode]||'').trim(),
+      name: String(r[kName]||'').trim(),
+      qty: parseNum(r[kQty]),
+      amount: parseNum(r[kAmount]),
+      unit: String(r[kUnit]||'').trim(),
+      locCode: String(kLocCode ? r[kLocCode] : '').trim(),
+      locName: String(kLocName ? r[kLocName] : '').trim(),
+      batch: String(kBatch ? r[kBatch] : '').trim(),
+      supplier: String(kSupplier ? r[kSupplier] : '').trim(),
+    }))
+    .filter(d => d.name || d.code);
+  ALL_DATA.forEach((d,i) => { d.idx = i; d.remain = d.qty; });
+
+  COUNTER = 1;
+  renderAll(); saveAll();
+  showToast(`已导入 ${ALL_DATA.length} 条物料（工作表：${sheetName}），请开始挑选`);
+  return ALL_DATA.length;
+}
+
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    if (ALL_DATA.length || PICKED.length) {
+      if (!confirm('导入新的月度表将覆盖当前物料清单，并清空全部已挑选记录。\n（课题管理中保存的课题会保留）\n\n是否继续？')) { e.target.value=''; return; }
+    }
+    const buf = await file.arrayBuffer();
+    await importFromBuffer(buf);
+  } catch (err) {
+    console.error(err);
+    showToast('导入失败：'+err.message, true);
+  }
+  e.target.value = '';
+});
+
+// ============= 渲染 =============
+function renderAll(){ renderProjectSelects(); renderPick(); renderSelected(); updateStats(); }
+
+function updateStats(){
+  document.getElementById('statTotal').textContent = ALL_DATA.length;
+  document.getElementById('statPicked').textContent = PICKED.length;
+  document.getElementById('statAmount').textContent = fmtMoney(PICKED.reduce((s,p)=>s+(p.takeAmount||0),0));
+  document.getElementById('selCount').textContent = PICKED.length;
+}
+
+function renderProjectSelects(){
+  const opts = '<option value="">（未指定课题）</option>' +
+    PROJECTS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.leader?' — 课题长：'+esc(p.leader):''}</option>`).join('');
+  const cur = document.getElementById('curProject');
+  const cv = cur.value; cur.innerHTML = opts; cur.value = cv;
+  const sel = document.getElementById('selProject');
+  const sv = sel.value;
+  sel.innerHTML = '<option value="">全部课题</option>' + PROJECTS.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  sel.value = sv;
+}
+
+function pickedTotalOf(idx){ return PICKED.filter(p=>p.idx===idx).reduce((s,p)=>s+p.takeQty,0); }
+
+// ---- ① 挑选表 ----
+function renderPick(){
+  const wrap = document.getElementById('pickTableWrap');
+  if (!ALL_DATA.length){
+    wrap.innerHTML = `<div class="empty">暂无物料数据<br>
+      <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📁 导入月度表</button><br>
+      <span class="hint">支持 .xlsx / .xls，自动识别「物料编码 / 物料长文本 / 数量 / 金额 / 计量单位 / 库存位置 / 批次 / 供应商」等列</span></div>`;
+    return;
+  }
+  const search = (document.getElementById('searchBox').value||'').trim().toLowerCase();
+  const fLoc = document.getElementById('filterLocation').value;
+  const onlyAvail = document.getElementById('onlyAvail').checked;
+  const extraCols = CUSTOM_COLS.filter(c => c.scope==='pick' || c.scope==='both');
+
+  // 存储地点下拉
+  const locSel = document.getElementById('filterLocation');
+  const curLoc = locSel.value;
+  const locs = [...new Set(ALL_DATA.map(d=>d.locName).filter(Boolean))].sort();
+  locSel.innerHTML = '<option value="">全部存储地点</option>' + locs.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+  if (locs.includes(curLoc)) locSel.value = curLoc;
+
+  let list = ALL_DATA.filter(d => {
+    if (fLoc && d.locName !== fLoc) return false;
+    if (onlyAvail && d.remain <= 0) return false;
+    if (search){
+      const txt = (d.code+' '+d.name+' '+d.batch+' '+d.supplier+' '+d.locName).toLowerCase();
+      if (!txt.includes(search)) return false;
+    }
+    return true;
+  });
+
+  let html = '<table><thead><tr><th style="width:44px;">#</th>';
+  COLS.forEach(c => html += `<th${c.num?' class="col-num"':''}>${c.label}</th>`);
+  html += '<th class="col-center">剩余可领</th>';
+  extraCols.forEach(c => html += `<th>${esc(c.label)}</th>`);
+  html += '<th class="col-center" style="min-width:170px;">挑选数量</th></tr></thead><tbody>';
+
+  if (!list.length){
+    html += `<tr><td colspan="99" class="empty">无匹配物料</td></tr>`;
+  } else {
+    list.forEach(d => {
+      const r = d.remain;
+      const badge = r<=0 ? '<span class="badge badge-done">已领完</span>'
+        : `<span class="badge ${r < d.qty*0.2 ? 'badge-low':'badge-ok'}">剩 ${fmtNum(r)} ${esc(d.unit)}</span>`;
+      html += `<tr>
+        <td class="no-data">${d.idx+1}</td>
+        <td style="white-space:nowrap;">${esc(d.code)}</td>
+        <td style="min-width:220px;">${esc(d.name)}</td>
+        <td class="col-num">${fmtNum(d.qty)}</td>
+        <td class="col-num">${fmtNum(d.amount)}</td>
+        <td>${esc(d.unit)}</td>
+        <td style="min-width:150px;">${esc(d.locName)}</td>
+        <td style="white-space:nowrap;">${esc(d.batch)}</td>
+        <td>${esc(d.supplier)}</td>
+        <td class="col-center">${badge}</td>`;
+      extraCols.forEach(c => {
+        html += `<td><input class="mini-input" value="${esc(d['c_'+c.key]||'')}" onchange="setMatCustom(${d.idx},'${c.key}',this.value)" placeholder="${esc(c.label)}"></td>`;
+      });
+      if (r > 0){
+        html += `<td class="col-center cell-btns">
+          <input type="number" class="qty-input" id="q_${d.idx}" value="${r}" min="0" max="${r}" step="any" title="最大可挑 ${fmtNum(r)}" onkeydown="if(event.key==='Enter')pickItem(${d.idx})">
+          <button class="btn btn-success btn-sm" onclick="pickItem(${d.idx})">＋挑选</button>
+        </td>`;
+      } else {
+        html += '<td class="col-center no-data">—</td>';
+      }
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  updateStats();
+}
+
+// ---- ② 已挑选表 ----
+function renderSelected(){
+  const wrap = document.getElementById('selectedTableWrap');
+  if (!PICKED.length){
+    wrap.innerHTML = '<div class="empty">尚未挑选任何物料<br><span class="hint">请到「① 挑选物料」标签页进行挑选</span></div>';
+    return;
+  }
+  const groupBy = document.getElementById('groupByProj').checked;
+  const fProj = document.getElementById('selProject').value;
+  const search = (document.getElementById('selSearch').value||'').trim().toLowerCase();
+  const extraCols = CUSTOM_COLS.filter(c => c.scope==='selected' || c.scope==='both');
+
+  let list = PICKED.filter(p => {
+    if (fProj && p.projectId !== fProj) return false;
+    if (search){
+      const txt = (p.code+' '+p.name+' '+p.batch+' '+p.supplier+' '+(p.project||'')+' '+(p.leader||'')).toLowerCase();
+      if (!txt.includes(search)) return false;
+    }
+    return true;
+  });
+
+  const headRow = (withOps) => '<thead><tr>'
+    + (withOps?'<th class="col-center" style="min-width:110px;">操作</th>':'')
+    + '<th>物料描述</th><th class="col-num">挑选数量</th><th class="col-num">挑选金额（元）</th><th>单位</th><th>存储地点</th><th>批次</th><th>供应商</th><th>课题名称</th><th>课题长</th>'
+    + extraCols.map(c=>`<th>${esc(c.label)}</th>`).join('')
+    + '</tr></thead>';
+
+  let html = '<table>' + headRow(groupBy) + '<tbody>';
+
+  if (!list.length){
+    html += '<tr><td colspan="99" class="empty">无匹配记录</td></tr>';
+  } else if (groupBy){
+    // 合并：课题长 + 课题名称 相同的分为一组
+    const groups = new Map();
+    list.forEach(p => {
+      const gk = (p.project||'（未指定课题）') + ' ◆ ' + (p.leader||'（未指定课题长）');
+      if (!groups.has(gk)) groups.set(gk, {project:p.project||'（未指定课题）', leader:p.leader||'（未指定课题长）', items:[]});
+      groups.get(gk).items.push(p);
+    });
+    for (const g of groups.values()){
+      const subQty = g.items.reduce((s,p)=>s+p.takeQty,0);
+      const subAmt = g.items.reduce((s,p)=>s+(p.takeAmount||0),0);
+      html += `<tr class="group-header"><td colspan="99">
+        📌 课题名称：<strong>${esc(g.project)}</strong>　|　课题长：<strong>${esc(g.leader)}</strong>
+        <span class="cnt">（${g.items.length} 项）</span>
+      </td></tr>`;
+      g.items.forEach(p => { html += pickRowHtml(p, extraCols, true); });
+      html += `<tr class="sub-total"><td>小计</td><td class="col-num">${fmtNum(subQty)}</td><td class="col-num">${fmtNum(subAmt)}</td><td colspan="99"></td></tr>`;
+    }
+  } else {
+    list.forEach(p => { html += pickRowHtml(p, extraCols, false); });
+    const totAmt = list.reduce((s,p)=>s+(p.takeAmount||0),0);
+    html += `<tr class="sub-total"><td>合计（${list.length} 项）</td><td></td><td class="col-num">${fmtNum(totAmt)}</td><td colspan="99"></td></tr>`;
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  updateStats();
+}
+
+function pickRowHtml(p, extraCols, withOps){
+  const proj = PROJECTS.find(x=>x.id===p.projectId);
+  return `<tr>
+    ${withOps?`<td class="col-center cell-btns">
+      <button class="btn btn-secondary btn-sm" onclick="openEditPick(${p.pickId})">修改</button>
+      <button class="btn btn-danger btn-sm" onclick="removePick(${p.pickId})">删除</button>
+    </td>`:''}
+    <td style="min-width:220px;">${esc(p.name)}</td>
+    <td class="col-num">${fmtNum(p.takeQty)}</td>
+    <td class="col-num">${fmtNum(p.takeAmount)}</td>
+    <td>${esc(p.unit)}</td>
+    <td>${esc(p.locName)}</td>
+    <td style="white-space:nowrap;">${esc(p.batch)}</td>
+    <td>${esc(p.supplier)}</td>
+    <td>${esc(p.project||'')}</td>
+    <td>${esc(p.leader||'')}</td>
+    ${extraCols.map(c=>`<td><input class="mini-input" value="${esc(p['c_'+c.key]||'')}" onchange="setPickCustom(${p.pickId},'${c.key}',this.value)"></td>`).join('')}
+  </tr>`;
+}
+
+// ============= 挑选操作 =============
+function pickItem(idx){
+  const d = ALL_DATA[idx];
+  if (!d || d.remain <= 0){ showToast('该物料已无可挑选数量', true); return; }
+  const inp = document.getElementById('q_'+idx);
+  const takeQty = Math.min(parseNum(inp.value), d.remain);
+  if (takeQty <= 0){ showToast('请输入有效的挑选数量', true); return; }
+  const proj = PROJECTS.find(p=>p.id===document.getElementById('curProject').value);
+  PICKED.push({
+    pickId: COUNTER++, idx,
+    code:d.code, name:d.name, qty:d.qty, amount:d.amount,
+    takeQty, takeAmount: d.qty>0 ? d.amount*takeQty/d.qty : 0,
+    unit:d.unit, locCode:d.locCode, locName:d.locName, batch:d.batch, supplier:d.supplier,
+    projectId: proj?proj.id:'', project: proj?proj.name:'', leader: proj?(proj.leader||''):'',
+  });
+  d.remain -= takeQty;
+  renderAll(); saveAll();
+  showToast(`已挑选：${d.name} × ${fmtNum(takeQty)} ${d.unit}${proj?'（'+proj.name+'）':''}`);
+}
+
+function openEditPick(pickId){
+  const p = PICKED.find(x=>x.pickId===pickId);
+  if (!p) return;
+  const d = ALL_DATA[p.idx];
+  const max = (d?d.remain:0) + p.takeQty;
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = `
+    <h3>修改挑选记录</h3>
+    <p class="hint" style="margin-bottom:6px;">${esc(p.name)}（批次 ${esc(p.batch)||'—'}）</p>
+    <p class="hint" style="margin-bottom:10px;">库存总量 ${fmtNum(p.qty)} ${esc(p.unit)}，本次最大可改 ${fmtNum(max)} ${esc(p.unit)}</p>
+    <label>挑选数量（${esc(p.unit)}）</label>
+    <input type="number" id="epQty" value="${p.takeQty}" min="0" max="${max}" step="any">
+    <label>所属课题（课题名称 / 课题长）</label>
+    <select id="epProj">
+      <option value="">（未指定课题）</option>
+      ${PROJECTS.map(x=>`<option value="${esc(x.id)}" ${x.id===p.projectId?'selected':''}>${esc(x.name)}${x.leader?' — '+esc(x.leader):''}</option>`).join('')}
+    </select>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePickEdit(${pickId})">保存</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function savePickEdit(pickId){
+  const p = PICKED.find(x=>x.pickId===pickId);
+  if (!p) return;
+  const d = ALL_DATA[p.idx];
+  const max = (d?d.remain:0) + p.takeQty;
+  const v = parseNum(document.getElementById('epQty').value);
+  if (v < 0){ showToast('数量不能为负', true); return; }
+  if (v > max){ showToast(`超出剩余可挑量（最多 ${fmtNum(max)}）`, true); return; }
+  if (v === 0){ // 数量改 0 视为删除
+    removePick(pickId); closeModal(); return;
+  }
+  if (d) d.remain += (p.takeQty - v);
+  p.takeQty = v;
+  p.takeAmount = p.qty>0 ? p.amount*v/p.qty : 0;
+  const proj = PROJECTS.find(x=>x.id===document.getElementById('epProj').value);
+  p.projectId = proj?proj.id:''; p.project = proj?proj.name:''; p.leader = proj?(proj.leader||''):'';
+  closeModal(); renderAll(); saveAll();
+  showToast('已保存修改');
+}
+
+function removePick(pickId){
+  const i = PICKED.findIndex(x=>x.pickId===pickId);
+  if (i<0) return;
+  const p = PICKED[i];
+  const d = ALL_DATA[p.idx];
+  if (d) d.remain += p.takeQty;
+  PICKED.splice(i,1);
+  renderAll(); saveAll();
+  showToast('已删除该挑选记录');
+}
+
+function clearAllSelected(){
+  if (!PICKED.length) return;
+  if (!confirm('确定清空全部已挑选记录？')) return;
+  PICKED.forEach(p => { const d = ALL_DATA[p.idx]; if (d) d.remain += p.takeQty; });
+  PICKED = [];
+  renderAll(); saveAll();
+  showToast('已清空全部挑选记录');
+}
+
+function switchTab(t){
+  document.getElementById('tabPick').classList.toggle('active', t==='pick');
+  document.getElementById('tabSelected').classList.toggle('active', t==='selected');
+  document.getElementById('pickPanel').style.display = t==='pick'?'':'none';
+  document.getElementById('selectedPanel').style.display = t==='selected'?'':'none';
+  if (t==='pick') renderPick(); else renderSelected();
+}
+
+// ============= 自定义列 =============
+function openColumnModal(){
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = `
+    <h3>自定义列</h3>
+    <p class="hint" style="margin-bottom:10px;">添加自定义字段（如：用途、备注、经手人…），可分别显示在挑选表 / 已挑选表中，内容可直接在表格单元格内编辑。</p>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:160px;"><label>列名</label><input id="newColLabel" placeholder="例如：用途"></div>
+      <div style="min-width:140px;"><label>显示位置</label>
+        <select id="newColScope">
+          <option value="both">两个界面都显示</option>
+          <option value="pick">仅挑选界面</option>
+          <option value="selected">仅已挑选界面</option>
+        </select></div>
+      <button class="btn btn-primary" onclick="addCustomCol()">添加</button>
+    </div>
+    <div style="margin-top:16px;"><strong>已有自定义列：</strong>
+      <div id="colList" style="margin-top:8px;">${renderColList()}</div>
+    </div>
+    <div class="actions"><button class="btn btn-secondary" onclick="closeModal()">关闭</button></div>`;
+  document.getElementById('modalBg').classList.add('show');
+  document.getElementById('newColLabel').focus();
+}
+
+function renderColList(){
+  if (!CUSTOM_COLS.length) return '<div class="hint">暂无自定义列</div>';
+  const scopeName = s => s==='both'?'两者':(s==='pick'?'仅挑选':'仅已挑选');
+  return CUSTOM_COLS.map(c => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed #e2e8f0;">
+      <strong style="flex:1;">${esc(c.label)}</strong>
+      <select onchange="updColScope('${c.key}',this.value)" style="padding:3px 6px;">
+        <option value="both" ${c.scope==='both'?'selected':''}>两者</option>
+        <option value="pick" ${c.scope==='pick'?'selected':''}>仅挑选</option>
+        <option value="selected" ${c.scope==='selected'?'selected':''}>仅已挑选</option>
+      </select>
+      <span class="hint">${scopeName(c.scope)}</span>
+      <button class="btn btn-danger btn-sm" onclick="delCustomCol('${c.key}')">删除</button>
+    </div>`).join('');
+}
+
+function addCustomCol(){
+  const label = document.getElementById('newColLabel').value.trim();
+  if (!label){ showToast('请输入列名', true); return; }
+  if (CUSTOM_COLS.some(c=>c.label===label)){ showToast('该列名已存在', true); return; }
+  CUSTOM_COLS.push({key:'col_'+Date.now(), label, scope:document.getElementById('newColScope').value});
+  document.getElementById('colList').innerHTML = renderColList();
+  document.getElementById('newColLabel').value = '';
+  renderAll(); saveAll();
+  showToast('已添加自定义列：'+label);
+}
+function updColScope(key, scope){ const c = CUSTOM_COLS.find(x=>x.key===key); if (c){ c.scope=scope; renderAll(); saveAll(); } }
+function delCustomCol(key){
+  if (!confirm('删除该自定义列？列中已填写的内容将一并删除。')) return;
+  CUSTOM_COLS = CUSTOM_COLS.filter(c=>c.key!==key);
+  ALL_DATA.forEach(d=>delete d['c_'+key]);
+  PICKED.forEach(p=>delete p['c_'+key]);
+  const cl = document.getElementById('colList'); if (cl) cl.innerHTML = renderColList();
+  renderAll(); saveAll();
+  showToast('已删除');
+}
+function setMatCustom(idx, key, val){ const d = ALL_DATA[idx]; if (d){ d['c_'+key] = val.trim(); saveAll(); } }
+function setPickCustom(pickId, key, val){ const p = PICKED.find(x=>x.pickId===pickId); if (p){ p['c_'+key] = val.trim(); saveAll(); } }
+
+// ============= 课题管理 =============
+function openProjectModal(){
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = `
+    <h3>课题管理</h3>
+    <p class="hint" style="margin-bottom:10px;">保存课题名称与课题长，挑选物料时可直接选择，下次领料无需重复输入。</p>
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:2;min-width:170px;"><label>课题名称</label><input id="npName" placeholder="例如：高性能混凝土研究"></div>
+      <div style="flex:1;min-width:120px;"><label>课题长</label><input id="npLeader" placeholder="例如：张三"></div>
+      <button class="btn btn-primary" onclick="addProject()">保存课题</button>
+    </div>
+    <div style="margin-top:16px;"><strong>已保存课题：</strong>
+      <div id="projList" style="margin-top:8px;">${renderProjList()}</div>
+    </div>
+    <div class="actions"><button class="btn btn-secondary" onclick="closeModal()">关闭</button></div>`;
+  document.getElementById('modalBg').classList.add('show');
+  document.getElementById('npName').focus();
+}
+
+function renderProjList(){
+  if (!PROJECTS.length) return '<div class="hint">暂无课题，请在上方添加</div>';
+  return PROJECTS.map(p => `
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px dashed #e2e8f0;">
+      <span style="flex:2;">📌 ${esc(p.name)}</span>
+      <span style="flex:1;">课题长：${esc(p.leader||'—')}</span>
+      <button class="btn btn-danger btn-sm" onclick="delProject('${p.id}')">删除</button>
+    </div>`).join('');
+}
+
+function addProject(){
+  const name = document.getElementById('npName').value.trim();
+  const leader = document.getElementById('npLeader').value.trim();
+  if (!name){ showToast('请输入课题名称', true); return; }
+  if (PROJECTS.some(p=>p.name===name)){ showToast('该课题名称已存在', true); return; }
+  PROJECTS.push({id:'p'+Date.now(), name, leader});
+  document.getElementById('projList').innerHTML = renderProjList();
+  document.getElementById('npName').value=''; document.getElementById('npLeader').value='';
+  renderProjectSelects(); saveAll();
+  showToast('已保存课题：'+name);
+}
+function delProject(id){
+  const used = PICKED.some(p=>p.projectId===id);
+  if (used && !confirm('该课题已被部分挑选记录使用，删除后这些记录将显示为「未指定课题」。是否继续？')) return;
+  PROJECTS = PROJECTS.filter(p=>p.id!==id);
+  PICKED.forEach(p=>{ if (p.projectId===id){ p.projectId=''; p.project=''; p.leader=''; } });
+  const pl = document.getElementById('projList'); if (pl) pl.innerHTML = renderProjList();
+  renderAll(); saveAll();
+  showToast('已删除课题');
+}
+
+// ============= 导出 =============
+function exportSelected(){
+  if (!PICKED.length){ showToast('暂无已挑选数据可导出', true); return; }
+  const extraCols = CUSTOM_COLS.filter(c => c.scope==='selected'||c.scope==='both');
+  const header = ['课题名称','课题长','物料编码','物料描述','挑选数量','单位','挑选金额','库存总量','原始金额','存储地点','批次编号','供应商'];
+  extraCols.forEach(c => header.push(c.label));
+  const aoa = [header];
+  PICKED.forEach(p => {
+    const row = [p.project||'', p.leader||'', p.code, p.name, p.takeQty, p.unit,
+      Math.round(p.takeAmount*100)/100, p.qty, p.amount, p.locName, p.batch, p.supplier];
+    extraCols.forEach(c => row.push(p['c_'+c.key]||''));
+    aoa.push(row);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:22},{wch:10},{wch:16},{wch:42},{wch:10},{wch:6},{wch:12},{wch:10},{wch:12},{wch:26},{wch:14},{wch:26}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '已挑选物料');
+  XLSX.writeFile(wb, '已挑选物料_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('已导出 Excel 文件');
+}
+
+// ============= 弹窗 =============
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); }
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id==='modalBg') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+// ============= 云端同步 =============
+const API_BASE = '';  // 相对路径，同域部署；跨域时改为 'http://服务器IP:端口'
+let ONLINE = false;
+let _saveTimer = null;
+
+function setOnline(v){
+  ONLINE = v;
+  const el = document.getElementById('onlineBadge');
+  if (v){ el.textContent = '● 在线'; el.style.background='#c6f6d5'; el.style.color='#22543d'; }
+  else  { el.textContent = '● 离线'; el.style.background='#fed7d7'; el.style.color='#742a2a'; }
+}
+
+async function pingServer(){
+  try {
+    const r = await fetch(API_BASE + '/api/ping', {cache:'no-store',method:'GET'});
+    return r.ok;
+  } catch(e){ return false; }
+}
+
+// 防抖保存到服务器（在线时），同时写 localStorage 作为备份
+function saveAll(){
+  const payload = {ALL_DATA, PICKED, PROJECTS, CUSTOM_COLS, COUNTER, META:{month:'', updated:''}};
+  // 永远写 localStorage 作为离线备份
+  try { localStorage.setItem('kyll_state_v1', JSON.stringify(payload)); } catch(e){}
+  // 在线时推送到服务器（防抖 800ms）
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(API_BASE + '/api/state', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (r.ok) setOnline(true); else setOnline(false);
+    } catch(e){ setOnline(false); }
+  }, 800);
+}
+
+// 从服务器加载（在线时），离线降级到 localStorage
+async function loadAll(silent){
+  let state = null;
+  try {
+    const r = await fetch(API_BASE + '/api/state', {cache:'no-store'});
+    if (r.ok){ state = await r.json(); setOnline(true); } else { setOnline(false); }
+  } catch(e){ setOnline(false); }
+  if (!state){
+    try {
+      const s = localStorage.getItem('kyll_state_v1');
+      if (s) state = JSON.parse(s);
+    } catch(e){}
+  }
+  if (state){
+    ALL_DATA = state.ALL_DATA||[];
+    PICKED = state.PICKED||[];
+    PROJECTS = state.PROJECTS||[];
+    CUSTOM_COLS = state.CUSTOM_COLS||[];
+    COUNTER = state.COUNTER||1;
+  }
+}
+
+// 定期心跳检测在线状态 + 拉取最新数据（防止多人操作覆盖）
+setInterval(async () => {
+  if (await pingServer()){
+    if (!ONLINE){ setOnline(true); await loadAll(true); renderAll(); }
+  } else { setOnline(false); }
+}, 8000);
+// 页面重新获得焦点时同步
+window.addEventListener('focus', async () => { await loadAll(true); renderAll(); });
+</script>
+</body>
+</html>
