@@ -645,7 +645,11 @@ document.getElementById('modalBg').addEventListener('click', e => { if (e.target
 document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
 
 // ============= 云端同步 =============
-const API_BASE = '';  // 相对路径，同域部署；跨域时改为 'http://服务器IP:端口'
+// 动态切换：GitHub Pages 部署时用 cpolar 公网地址，本地运行用相对路径
+const IS_GITHUB_PAGES = location.hostname.includes('github.io');
+const API_BASE = IS_GITHUB_PAGES
+  ? 'https://6103c42d.r3.cpolar.cn'   // TODO: cpolar 地址每次重启会变，需更新
+  : '';
 let ONLINE = false;
 let _saveTimer = null;
 

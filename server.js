@@ -1,6 +1,7 @@
 // 科研领料挑选系统 - Node.js Express 后端
 // 兼容本地运行和 Render.com 云部署
 const express = require('express');
+const compression = require('compression');
 const fs = require('fs');
 const path = require('path');
 
@@ -28,6 +29,7 @@ if (!fs.existsSync(STATE_FILE)) {
 }
 
 // 中间件
+app.use(compression({ threshold: 1024 }));  // gzip 压缩，超过 1KB 启用
 app.use(express.json({ limit: '10mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');

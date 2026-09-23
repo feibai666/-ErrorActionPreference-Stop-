@@ -1,6 +1,21 @@
 node_modules/
 data/
-cpolar/
 node-v20.18.0-win-x64/
 *.log
 .DS_Store
+
+# 二进制工具，不进仓库
+cpolar.exe
+render.exe
+GitSetup.exe
+cfd.exe
+cloudflared.exe
+*.zip
+render-cli/
+*.url
+*.bat
+start.bat
+还原动态IP.bat
+network_backup.txt
+server.ps1
+nodejs.zip
