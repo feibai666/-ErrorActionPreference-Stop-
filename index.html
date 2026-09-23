@@ -652,32 +652,39 @@ let API_BASE = IS_GITHUB_PAGES
   ? (localStorage.getItem('cpolar_url') || '')
   : '';
 
-// GitHub Pages 上如果没配 cpolar URL，在页面加载时提示
-if (IS_GITHUB_PAGES && !API_BASE) {
-  const saved = localStorage.getItem('cpolar_url');
-  if (!saved) {
-    // 显示一个临时提示条，让用户输入 cpolar 地址
-    window.addEventListener('DOMContentLoaded', () => {
-      const tip = document.createElement('div');
-      tip.id = 'cpolarTip';
-      tip.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ed8936;color:#fff;padding:8px 16px;z-index:9999;font-size:13px;text-align:center;';
-      tip.innerHTML = '⚠️ 请输入本地服务地址 (cpolar URL)：' +
-        '<input id="cpolarInput" placeholder="http://xxxxxx.r3.cpolar.cn" style="padding:4px 8px;border-radius:4px;border:none;margin:0 8px;width:220px;">' +
-        '<button onclick="saveCpolar()" style="background:#fff;color:#ed8936;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:bold;">保存</button>' +
-        '<button onclick="document.getElementById(\'cpolarTip\').remove()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:4px;cursor:pointer;padding:2px 8px;margin-left:8px;">✕</button>';
-      document.body.prepend(tip);
-      window.saveCpolar = function() {
-        const val = document.getElementById('cpolarInput').value.trim();
-        if (val) {
-          localStorage.setItem('cpolar_url', val);
-          API_BASE = val;
-          document.getElementById('cpolarTip').remove();
-          alert('已保存！刷新页面即可生效。');
-        }
-      };
-    });
-  }
+// 显示/更新 cpolar 地址设置条
+function showCpolarBar(prefill){
+  const old = document.getElementById('cpolarTip');
+  if (old) old.remove();
+  const tip = document.createElement('div');
+  tip.id = 'cpolarTip';
+  tip.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ed8936;color:#fff;padding:8px 16px;z-index:9999;font-size:13px;text-align:center;';
+  tip.innerHTML = '⚠️ 请输入本地服务地址 (cpolar URL，必须 https 开头)：' +
+    '<input id="cpolarInput" placeholder="https://xxxxxx.r3.cpolar.cn" value="' + (prefill||'') + '" style="padding:4px 8px;border-radius:4px;border:none;margin:0 8px;width:230px;">' +
+    '<button onclick="saveCpolar()" style="background:#fff;color:#ed8936;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:bold;">保存</button>' +
+    '<button onclick="document.getElementById(\'cpolarTip\').remove()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:4px;cursor:pointer;padding:2px 8px;margin-left:8px;">✕</button>';
+  document.body.prepend(tip);
 }
+
+// 保存 cpolar 地址（http 自动升级为 https，避免混合内容拦截）
+window.saveCpolar = function() {
+  let val = document.getElementById('cpolarInput').value.trim();
+  if (val) {
+    val = val.replace(/^http:\/\//i, 'https://');
+    localStorage.setItem('cpolar_url', val);
+    API_BASE = val;
+    document.getElementById('cpolarTip').remove();
+    alert('已保存！即将自动刷新页面。');
+    location.reload();
+  }
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+  // GitHub Pages 上：没配过地址，或离线时，都弹出设置条
+  if (IS_GITHUB_PAGES && !API_BASE) {
+    showCpolarBar('');
+  }
+});
 let ONLINE = false;
 let _saveTimer = null;
 
@@ -685,7 +692,7 @@ function setOnline(v){
   ONLINE = v;
   const el = document.getElementById('onlineBadge');
   if (v){ el.textContent = '● 在线'; el.style.background='#c6f6d5'; el.style.color='#22543d'; }
-  else  { el.textContent = '● 离线'; el.style.background='#fed7d7'; el.style.color='#742a2a'; }
+  else  { el.textContent = '● 离线(点此设置)'; el.style.background='#fed7d7'; el.style.color='#742a2a'; el.style.cursor='pointer'; el.onclick = () => { if (IS_GITHUB_PAGES) showCpolarBar(localStorage.getItem('cpolar_url')||''); }; }
 }
 
 async function pingServer(){
