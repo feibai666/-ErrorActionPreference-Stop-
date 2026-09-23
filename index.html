@@ -645,11 +645,39 @@ document.getElementById('modalBg').addEventListener('click', e => { if (e.target
 document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
 
 // ============= 云端同步 =============
-// 动态切换：GitHub Pages 部署时用 cpolar 公网地址，本地运行用相对路径
+// GitHub Pages 部署时需要通过 cpolar 访问本地 API
+// cpolar URL 每次重启会变，用户可在设置面板更新
 const IS_GITHUB_PAGES = location.hostname.includes('github.io');
-const API_BASE = IS_GITHUB_PAGES
-  ? 'https://6103c42d.r3.cpolar.cn'   // TODO: cpolar 地址每次重启会变，需更新
+let API_BASE = IS_GITHUB_PAGES
+  ? (localStorage.getItem('cpolar_url') || '')
   : '';
+
+// GitHub Pages 上如果没配 cpolar URL，在页面加载时提示
+if (IS_GITHUB_PAGES && !API_BASE) {
+  const saved = localStorage.getItem('cpolar_url');
+  if (!saved) {
+    // 显示一个临时提示条，让用户输入 cpolar 地址
+    window.addEventListener('DOMContentLoaded', () => {
+      const tip = document.createElement('div');
+      tip.id = 'cpolarTip';
+      tip.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ed8936;color:#fff;padding:8px 16px;z-index:9999;font-size:13px;text-align:center;';
+      tip.innerHTML = '⚠️ 请输入本地服务地址 (cpolar URL)：' +
+        '<input id="cpolarInput" placeholder="http://xxxxxx.r3.cpolar.cn" style="padding:4px 8px;border-radius:4px;border:none;margin:0 8px;width:220px;">' +
+        '<button onclick="saveCpolar()" style="background:#fff;color:#ed8936;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:bold;">保存</button>' +
+        '<button onclick="document.getElementById(\'cpolarTip\').remove()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:4px;cursor:pointer;padding:2px 8px;margin-left:8px;">✕</button>';
+      document.body.prepend(tip);
+      window.saveCpolar = function() {
+        const val = document.getElementById('cpolarInput').value.trim();
+        if (val) {
+          localStorage.setItem('cpolar_url', val);
+          API_BASE = val;
+          document.getElementById('cpolarTip').remove();
+          alert('已保存！刷新页面即可生效。');
+        }
+      };
+    });
+  }
+}
 let ONLINE = false;
 let _saveTimer = null;
 
