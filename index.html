@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>科研领料挑选系统</title>
-<script src="xlsx.full.min.js"></script>
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f5f7fa; color: #333; font-size: 14px; }
@@ -175,8 +175,25 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderAll();
 });
 
+// ============= Excel 库按需加载（省流量：手机端不下载 861KB 的 xlsx 库） =============
+let _xlsxPromise = null;
+function ensureXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  if (!_xlsxPromise) {
+    _xlsxPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'xlsx.full.min.js';
+      s.onload = res;
+      s.onerror = () => { _xlsxPromise = null; rej(new Error('加载Excel组件失败')); };
+      document.head.appendChild(s);
+    });
+  }
+  return _xlsxPromise;
+}
+
 // ============= Excel 导入 =============
 async function importFromBuffer(buf){
+  await ensureXLSX();
   const wb = XLSX.read(buf, {type:'array'});
   const sheetName = wb.SheetNames.find(n => /可挑选/.test(n))
     || wb.SheetNames.find(n => /挑选|物料/.test(n))
@@ -619,8 +636,9 @@ function delProject(id){
 }
 
 // ============= 导出 =============
-function exportSelected(){
+async function exportSelected(){
   if (!PICKED.length){ showToast('暂无已挑选数据可导出', true); return; }
+  await ensureXLSX();
   const extraCols = CUSTOM_COLS.filter(c => c.scope==='selected'||c.scope==='both');
   const header = ['课题名称','课题长','物料编码','物料描述','挑选数量','单位','挑选金额','库存总量','原始金额','存储地点','批次编号','供应商'];
   extraCols.forEach(c => header.push(c.label));
